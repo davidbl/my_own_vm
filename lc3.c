@@ -188,10 +188,35 @@ int main(int argc, const char* argv[])
         }
         break;
       case OP_JMP:
+        {
+          uint16_t r1 = (instr >> 6) & 0x7;
+          reg[R_PC] = reg[r1];
+        }
         break;
       case OP_JSR:
+        {
+          reg[R_R7] = reg[R_PC];
+          uint16_t ctr = (instr >> 11) & 0x1;
+          if (ctr)
+          {
+            uint16_t pc_offset = sign_extend(instr & 0x7ff, 11);
+            reg[R_PC] += pc_offset;  /* JSR */
+          }
+          else
+          {
+            uint16_t base_r = (instr >> 6) & 0x7;
+            reg[R_PC] = reg[base_r];
+          }
+        }
         break;
       case OP_LD:
+        {
+          /* destination register (DR) */
+          uint16_t r0 = (instr >> 9) & 0x7;
+          uint16_t pc_offset = sign_extend(instr & 0x1ff, 9);
+          reg[r0] = mem_read(reg[R_PC] + pc_offset);
+          update_flags(r0);
+        }
         break;
       case OP_LDI:
         {
@@ -205,14 +230,52 @@ int main(int argc, const char* argv[])
         }
         break;
       case OP_LDR:
+        {
+          /* destination register (DR) */
+          uint16_t r0 = (instr >> 9) & 0x7;
+          /* base register (BR) */
+          uint16_t r1 = (instr >> 6) & 0x7;
+          /* offest 6 */
+          uint16_t offset = sign_extend(instr & 0x3f, 6);
+          reg[r0] = mem_read(reg[r1] + offset);
+          update_flags(r0);
+        }
         break;
       case OP_LEA:
+        {
+          /* destination register (DR) */
+          uint16_t r0 = (instr >> 9) & 0x7;
+          uint16_t pc_offset = sign_extend(instr & 0x1ff, 9);
+          reg[r0] = reg[R_PC] + pc_offset;
+          update_flags(r0);
+        }
         break;
       case OP_ST:
+        {
+          /* source register (DR) */
+          uint16_t r0 = (instr >> 9) & 0x7;
+          uint16_t pc_offset = sign_extend(instr & 0x1ff, 9);
+          mem_write(reg[R_PC] + pc_offset, reg[r0]);
+        }
         break;
       case OP_STI:
+        {
+          /* source register (DR) */
+          uint16_t r0 = (instr >> 9) & 0x7;
+          uint16_t pc_offset = sign_extend(instr & 0x1ff, 9);
+          mem_write(mem_read(reg[R_PC] + pc_offset), reg[r0]);
+        }
         break;
       case OP_STR:
+        {
+          /* source register (DR) */
+          uint16_t r0 = (instr >> 9) & 0x7;
+          /* base register (DR) */
+          uint16_t r1 = (instr >> 6) & 0x7;
+          /* offest 6 */
+          uint16_t offset = sign_extend(instr & 0x3f, 6);
+          mem_write(reg[r1] + offset, reg[r0]);
+        }
         break;
       case OP_TRAP:
         break;
@@ -224,5 +287,4 @@ int main(int argc, const char* argv[])
         break;
     }
   }
-
 }
