@@ -60,6 +60,16 @@ enum
   FL_NEG = 1 << 2, /* N */
 };
 
+enum
+{
+  TRAP_GETC = 0x20,   /* get character from keyboard */
+  TRAP_OUT = 0x21,    /* output a character */
+  TRAP_PUTS = 0x22,   /* output a word string */
+  TRAP_IN = 0x23,     /* inpuyt a string */
+  TRAP_PUTSP = 0x24,  /* output a byte string */
+  TRAP_HALT = 0x25    /* halt the program */
+};
+
 /* Functions */
 uint16_t sign_extend(uint16_t x, int bit_count)
 {
@@ -278,6 +288,63 @@ int main(int argc, const char* argv[])
         }
         break;
       case OP_TRAP:
+        {
+          switch (instr & 0xff)
+          {
+            case TRAP_GETC:
+              {
+                reg[R_R0] = (uint16_t)getchar();
+              }
+              break;
+            case TRAP_OUT:
+              {
+                putc((char)reg[R_R0], stdout);
+                fflush(stdout);
+              }
+              break;
+            case TRAP_PUTS:
+              {
+                uint16_t* c = memory + reg[R_R0];
+                while (*c)
+                {
+                  putc((char)*c, stdout);
+                  ++c;
+                }
+                fflush(stdout);
+              }
+              break;
+            case TRAP_IN:
+              {
+                printf("Enter a character: ");
+                reg[R_R0] = (uint16_t)getchar();
+              }
+              break;
+            case TRAP_PUTSP:
+              {
+                /* one char per byte (two bytes per word)
+                   here we need to swap back to
+                   big endian format */
+                uint16_t* c = memory + reg[R_R0];
+                while(*c)
+                {
+                  char char1 = (*c) & 0xFF;
+                  putc(char1, stdout);
+                  char char2 = (*c) >> 8;
+                  if (char2) putc(char2, stdout);
+                  ++c;
+                }
+                fflush(stdout);
+              }
+              break;
+            case TRAP_HALT:
+              {
+                puts("HALT");
+                fflush(stdout);
+                running = 0;
+              }
+              break;
+          }
+        }
         break;
       case OP_RES:
         abort();
